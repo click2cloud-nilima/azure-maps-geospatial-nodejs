@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Hurricanes data - From NodeJS</title>
+
+    <meta charset="utf-8" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <meta http-equiv="x-ua-compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description"
+        content="This sample shows how the symbol layer can be used to automatically render labels for polygons on the map. " />
+    <meta name="keywords" content="Microsoft maps, map, gis, API, SDK, template, fill pattern, polygonlayer" />
+    <meta name="author" content="Microsoft Azure Maps" />
+
+    <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
+    <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css"
+        type="text/css" />
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <script type='text/javascript'>
+        var map;
+        var NodeURL = "https://geospatial-backend.azurewebsites.net"
+
+        function GetData() {
+            $.getJSON(NodeURL + "/data", function (json) {
+                //Create a heatmap and add it to the map.
+                GetMap(json.data)
+            });
+        }
+
+        function GetMap(geo_data) {
+
+            //Initialize a map instance.
+            map = new atlas.Map('myMap', {
+                center: [-81.760254, 27.994402],
+                zoom: 6,
+                view: 'Auto',
+
+                //Add authentication details for connecting to Azure Maps.
+                authOptions: {
+
+                    // Alternatively, use an Azure Maps key. Get an Azure Maps key at https://azure.com/maps. NOTE: The primary key should be used as the key.
+                    authType: 'subscriptionKey',
+                    subscriptionKey: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+                }
+            });
+
+            //Wait until the map resources are ready.
+            map.events.add('ready', function () {
+                datasource = new atlas.source.DataSource();
+                map.sources.add(datasource);
+
+                //Add the polygon data to the data source.
+                // datasource.add(data);
+                datasource.add(JSON.parse(geo_data));
+
+                //Create a layer to render the label of the polygon.
+                var label = new atlas.layer.SymbolLayer(datasource, null, {
+                    iconOptions: {
+                        //Hide the default image. 
+                        image: 'none'
+                    },
+                    textOptions: {
+                        //Reference the label property of the polygon as the text field. 
+                        textField: ['get', 'LandfallLocation']
+                    }
+                })
+
+
+                var label1 = new atlas.layer.SymbolLayer(datasource, null, {
+                    iconOptions: {
+                        //Hide the default image. 
+                        image: 'none'
+                    },
+                    textOptions: {
+                        //Reference the label property of the polygon as the text field. 
+                        textField: ['get', 'CustomerCount']
+                    }
+                })
+
+                map.layers.add([
+                    //Create a layer to render the polygon data.
+                    new atlas.layer.HeatMapLayer(datasource, null
+                        , {
+                            weight: [
+                                'interpolate',
+                                ['exponential', 2],
+                                ['get', 'SaffirSimpsonCategory'],
+                                3, 0.4,
+                                4, 0.6,
+                                5, 1    //Any hurricane above a SaffirSimpson of 5 will have a weight of 1
+                            ],
+                            intensity: 1.5,
+                            // weight:
+                            //     ['get', 'SaffirSimpsonCategory']
+                            // ,
+                            radius: 50,
+                            // radius: [
+                            //     'interpolate',
+                            //     ['linear'],
+                            //     ['get', 'SaffirSimpsonCategory'],
+                            //     3, 40,
+                            //     4, 50,
+                            //     5, 60
+                            // ],
+                            color: [
+                                'interpolate',
+                                ['linear'],
+                                ['heatmap-density'],
+                                0, 'rgba(33,102,172,0)',
+                                0.2, 'turquoise',
+                                0.4, 'yellow',
+                                0.6, 'orange',
+                                0.8, 'crimson',
+                                1, 'red'
+                            ]
+                        }
+                    ), label
+                ]);
+
+                map.layers.add([
+                    new atlas.layer.BubbleLayer(datasource, 'woodgrove-customers', {
+                        opacity: -0.2,
+                        color: 'green',
+                        radius: 10
+
+                        // color: [
+                        //     'interpolate',
+                        //     ['linear'],
+                        //     ['get', 'SaffirSimpsonCategory'],
+                        //     0, 'green',
+                        //     5, 'yellow',
+                        //     6, 'orange',
+                        //     7, 'red'
+                        // ],
+
+                        // radius: [
+                        //     'interpolate',
+                        //     ['linear'],
+                        //     ['get', 'CustomerCount'],
+                        //     3, 5,
+                        //     4, 10,
+                        //     5, 20
+                        // ]
+                    }),
+
+                    label1
+                ]);
+                //Create a popup but leave it closed so we can update it and display it later.
+                popup = new atlas.Popup({
+                    position: [0, 0],
+                    pixelOffset: [0, -18]
+                });
+
+                //Close the popup when the mouse moves on the map.
+                map.events.add('mousemove', closePopup);
+
+                /**
+                 * Open the popup on mouse move or touchstart on the symbol layer.
+                 * Mouse move is used as mouseover only fires when the mouse initially goes over a symbol. 
+                 * If two symbols overlap, moving the mouse from one to the other won't trigger the event for the new shape as the mouse is still over the layer.
+                 */
+                map.events.add('mousemove', label1, symbolHovered);
+                map.events.add('touchstart', label1, symbolHovered);
+
+            });
+        }
+
+        function closePopup() {
+            popup.close();
+        }
+
+        function symbolHovered(e) {
+            //Make sure the event occurred on a shape feature.
+            if (e.shapes && e.shapes.length > 0) {
+                var properties = e.shapes[0].getProperties();
+
+                //Update the content and position of the popup.
+                popup.setOptions({
+                    //Create the content of the popup.
+                    content: `<div style="padding:10px;"><b>City Name: ${properties.LandfallLocation}</b><br/>Woodgrove Customers: ${properties.CustomerCount}</div>`,
+                    position: e.shapes[0].getCoordinates(),
+                    pixelOffset: [0, -18]
+                });
+
+                //Open the popup.
+                popup.open(map);
+            }
+        }
+    </script>
+</head>
+
+<body onload="GetData()">
+    <h1>Woodgrove Customers in Hurricane affected areas of Florida</h1>
+    <div id="myMap" style="position:relative;width:100%;min-width:290px;min-height:600px;"></div>
+
+    <!-- <fieldset style="width:calc(100% - 30px);min-width:290px;margin-top:10px;">
+        <legend>
+            <h1 style="font-size:16px">Polygon labels - symbol layer</h1>
+        </legend>
+        This sample shows how the symbol layer can be used to automatically render labels for polygons on the map.
+    </fieldset> -->
+</body>
+
+</html>
