@@ -20,9 +20,37 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"
         integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 
+    <style>
+        .legend {
+            font-family: "Segoe UI";
+            font-size: 12px;
+            position: absolute;
+            top: 70px;
+            background-color: #fff;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .legend i {
+            width: 12px;
+            height: 12px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+
+        .header_map {
+            font-family: "Segoe UI";
+            background: #638842;
+            color: white;
+            padding-bottom: 5px;
+            padding-left: 10px;
+        }
+    </style>
+
     <script type='text/javascript'>
         var map;
-        var NodeURL = "https://geospatial-backend.azurewebsites.net"
+        var NodeURL = "https://XXXXXXXXXXXXXXXXX.azurewebsites.net"
 
         function GetData() {
             $.getJSON(NodeURL + "/data", function (json) {
@@ -44,7 +72,7 @@
 
                     // Alternatively, use an Azure Maps key. Get an Azure Maps key at https://azure.com/maps. NOTE: The primary key should be used as the key.
                     authType: 'subscriptionKey',
-                    subscriptionKey: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+                    subscriptionKey: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
                 }
             });
 
@@ -194,8 +222,27 @@
 </head>
 
 <body onload="GetData()">
-    <h1 style="background: cornflowerblue;color: white;">Woodgrove Customers in Hurricane affected areas of Florida</h1>
+    <h1 class="header_map">
+        Woodgrove Customers in Hurricane affected
+        areas of Florida</h1>
     <div id="myMap" style="position:relative;width:100%;min-width:290px;min-height:600px;margin-top: -22px;"></div>
+    <div class="legend" style="right: 70px;">
+        <b>Hurricane Risk Area</b>
+        <table>
+            <tr>
+                <td><i style="background:#da0000" /></td>
+                <td>High Risk Area</td>
+            </tr>
+            <tr>
+                <td><i style="background:#ff9800" /></td>
+                <td>Medium Risk Area</td>
+            </tr>
+            <tr>
+                <td><i style="background:#0fa797" /></td>
+                <td>Low Risk Area</td>
+            </tr>
+        </table>
+    </div>
 
     <!-- <fieldset style="width:calc(100% - 30px);min-width:290px;margin-top:10px;">
         <legend>
